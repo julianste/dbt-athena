@@ -1,6 +1,6 @@
 import posixpath as path
 from itertools import chain
-from threading import Lock
+from threading import Lock, Timer
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -113,8 +113,32 @@ class AthenaAdapter(SQLAdapter):
             self._delete_from_s3(client, partition["StorageDescriptor"]["Location"])
 
     @available
-    def clean_up_table(self, database_name: str, table_name: str):
-        # Look up Glue partitions & clean up
+    def update_table_data_s3_location(self, database_name: str, table_name: str, new_location: str):
+        """
+        Updates the location attribute of a glue table to a new location
+        """
+        conn = self.connections.get_thread_connection()
+        client = conn.handle
+
+        with boto3_client_lock:
+            glue_client = client.session.client("glue", region_name=client.region_name, config=get_boto3_config())
+        update_table_params = {
+            "DatabaseName": database_name,
+            "TableInput": {
+                "Name": table_name,
+                "StorageDescriptor": {
+                    "Location": new_location
+                }
+            },
+        }
+
+        print(f"Updating table location with new location {new_location}")
+
+        glue_client.update_table(**update_table_params)
+
+    @available
+    def clean_up_table(self, database_name: str, table_name: str, with_delay: bool = False):
+        # Look up table location & clean up
         conn = self.connections.get_thread_connection()
         client = conn.handle
         with boto3_client_lock:
@@ -123,12 +147,37 @@ class AthenaAdapter(SQLAdapter):
             table = glue_client.get_table(DatabaseName=database_name, Name=table_name)
         except ClientError as e:
             if e.response["Error"]["Code"] == "EntityNotFoundException":
-                logger.debug(f"Table '{table_name}' does not exists - Ignoring")
+                logger.debug(f"Table '{table_name}' does not exist - Ignoring")
                 return
+            raise e
 
         if table is not None:
             s3_location = table["Table"]["StorageDescriptor"]["Location"]
-            self._delete_from_s3(client, s3_location)
+            print(f"cleaning up {s3_location}")
+            if with_delay:
+                self._delete_from_s3(client, s3_location)
+                # t = Timer(60.0, self._delete_from_s3, args=[client, s3_location])
+                # t.start()
+            else:
+                self._delete_from_s3(client, s3_location)
+
+    @available
+    def get_table_location(self, database_name: str, table_name: str) -> str:
+        conn = self.connections.get_thread_connection()
+        client = conn.handle
+        with boto3_client_lock:
+            glue_client = client.session.client("glue", region_name=client.region_name, config=get_boto3_config())
+        try:
+            print(f"getting {database_name}/{table_name}")
+            table = glue_client.get_table(DatabaseName=database_name, Name=table_name)
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "EntityNotFoundException":
+                logger.debug(f"Table '{table_name}' does not exist")
+            raise e
+
+        if table is not None:
+            print(f"returning table location {table['Table']['StorageDescriptor']['Location']}")
+            return table["Table"]["StorageDescriptor"]["Location"]
 
     @available
     def prune_s3_table_location(self, s3_table_location: str):

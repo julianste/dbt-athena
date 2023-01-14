@@ -1,4 +1,4 @@
-{% macro athena__create_table_as(temporary, relation, sql) -%}
+{% macro athena__create_table_as(temporary, relation, location, sql) -%}
   {%- set external_location = config.get('external_location', default=none) -%}
   {%- set partitioned_by = config.get('partitioned_by', default=none) -%}
   {%- set bucketed_by = config.get('bucketed_by', default=none) -%}
@@ -13,7 +13,6 @@
 
   {%- set location_property = 'external_location' -%}
   {%- set partition_property = 'partitioned_by' -%}
-  {%- set location = adapter.s3_table_location(s3_data_dir, s3_data_naming, relation.schema, relation.identifier, external_location, temporary) -%}
 
   {%- if table_type == 'iceberg' -%}
     {%- set location_property = 'location' -%}
