@@ -159,8 +159,6 @@ class AthenaAdapter(SQLAdapter):
                 print(f"sleeping for {delay_seconds_before_s3_delete} minutes...")
                 sleep(delay_seconds_before_s3_delete)
                 self._delete_from_s3(client, s3_location)
-                # t = Timer(60.0, self._delete_from_s3, args=[client, s3_location])
-                # t.start()
             else:
                 self._delete_from_s3(client, s3_location)
 

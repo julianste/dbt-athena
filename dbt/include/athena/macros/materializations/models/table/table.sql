@@ -39,11 +39,11 @@
     get location of existing table
     {% set existing_location = adapter.get_table_location(target_relation.schema, target_relation.identifier) %}
     -- redirect s3 location of existing table to new location
-    {% call statement('alter_table_1') -%}
+    {% call statement('alter_table_location_existing_table') -%}
       {{ alter_table_location(target_relation, location) }}
     {%- endcall %}
     -- redirect s3 location of tmp table to old location
-    {% call statement('alter_table_2') -%}
+    {% call statement('alter_table_location_tmp_table') -%}
       {{ alter_table_location(relation_to_build, existing_location) }}
     {%- endcall %}
     -- drop temporary table (and prune old location after a delay)
