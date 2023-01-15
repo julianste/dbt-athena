@@ -13,7 +13,7 @@
 
   {%- set s3_data_dir = config.get('s3_data_dir', default=target.s3_data_dir) -%}
   {%- set s3_data_naming = config.get('s3_data_naming', default=target.s3_data_naming) -%}
-  {%- set zero_downtime_delete_delay_seconds = config.get('zero_downtime_delete_delay_seconds', default=30) -%}
+  {%- set zero_downtime_delete_delay_seconds = config.get('zero_downtime_delete_delay_seconds', default=target.zero_downtime_delete_delay_seconds) -%}
   {%- set external_location = config.get('external_location', default=none) -%}
   {%- set location = adapter.s3_table_location(s3_data_dir, s3_data_naming, target_relation.schema, target_relation.identifier, external_location, False) -%}
 

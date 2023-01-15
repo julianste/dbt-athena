@@ -133,8 +133,6 @@ class AthenaAdapter(SQLAdapter):
             },
         }
 
-        print(f"Updating table location with new location {new_location}")
-
         glue_client.update_table(**update_table_params)
 
     @available
@@ -154,9 +152,8 @@ class AthenaAdapter(SQLAdapter):
 
         if table is not None:
             s3_location = table["Table"]["StorageDescriptor"]["Location"]
-            print(f"cleaning up {s3_location}")
             if delay_seconds_before_s3_delete is not None:
-                print(f"sleeping for {delay_seconds_before_s3_delete} minutes...")
+                logger.info(f"waiting {delay_seconds_before_s3_delete} seconds before pruning old location {s3_location}...")
                 sleep(delay_seconds_before_s3_delete)
                 self._delete_from_s3(client, s3_location)
             else:
@@ -169,7 +166,6 @@ class AthenaAdapter(SQLAdapter):
         with boto3_client_lock:
             glue_client = client.session.client("glue", region_name=client.region_name, config=get_boto3_config())
         try:
-            print(f"getting {database_name}/{table_name}")
             table = glue_client.get_table(DatabaseName=database_name, Name=table_name)
         except ClientError as e:
             if e.response["Error"]["Code"] == "EntityNotFoundException":
@@ -177,7 +173,6 @@ class AthenaAdapter(SQLAdapter):
             raise e
 
         if table is not None:
-            print(f"returning table location {table['Table']['StorageDescriptor']['Location']}")
             return table["Table"]["StorageDescriptor"]["Location"]
 
     @available
