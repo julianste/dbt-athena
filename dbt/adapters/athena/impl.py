@@ -1,6 +1,6 @@
 import posixpath as path
 from itertools import chain
-from threading import Lock, Timer
+from threading import Lock
 from time import sleep
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 from urllib.parse import urlparse
@@ -125,12 +125,7 @@ class AthenaAdapter(SQLAdapter):
             glue_client = client.session.client("glue", region_name=client.region_name, config=get_boto3_config())
         update_table_params = {
             "DatabaseName": database_name,
-            "TableInput": {
-                "Name": table_name,
-                "StorageDescriptor": {
-                    "Location": new_location
-                }
-            },
+            "TableInput": {"Name": table_name, "StorageDescriptor": {"Location": new_location}},
         }
 
         glue_client.update_table(**update_table_params)
@@ -153,7 +148,9 @@ class AthenaAdapter(SQLAdapter):
         if table is not None:
             s3_location = table["Table"]["StorageDescriptor"]["Location"]
             if delay_seconds_before_s3_delete is not None:
-                logger.info(f"waiting {delay_seconds_before_s3_delete} seconds before pruning old location {s3_location}...")
+                logger.info(
+                    f"waiting {delay_seconds_before_s3_delete} seconds before pruning old location {s3_location}..."
+                )
                 sleep(delay_seconds_before_s3_delete)
                 self._delete_from_s3(client, s3_location)
             else:
