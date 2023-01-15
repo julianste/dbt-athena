@@ -1,6 +1,7 @@
 import posixpath as path
 from itertools import chain
 from threading import Lock, Timer
+from time import sleep
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -137,7 +138,7 @@ class AthenaAdapter(SQLAdapter):
         glue_client.update_table(**update_table_params)
 
     @available
-    def clean_up_table(self, database_name: str, table_name: str, with_delay: bool = False):
+    def clean_up_table(self, database_name: str, table_name: str, delay_seconds_before_s3_delete: int = None):
         # Look up table location & clean up
         conn = self.connections.get_thread_connection()
         client = conn.handle
@@ -154,7 +155,9 @@ class AthenaAdapter(SQLAdapter):
         if table is not None:
             s3_location = table["Table"]["StorageDescriptor"]["Location"]
             print(f"cleaning up {s3_location}")
-            if with_delay:
+            if delay_seconds_before_s3_delete is not None:
+                print(f"sleeping for {delay_seconds_before_s3_delete} minutes...")
+                sleep(delay_seconds_before_s3_delete)
                 self._delete_from_s3(client, s3_location)
                 # t = Timer(60.0, self._delete_from_s3, args=[client, s3_location])
                 # t.start()
